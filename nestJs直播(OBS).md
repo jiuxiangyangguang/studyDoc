@@ -9,7 +9,7 @@
 - 通过 [`node-media-server`搭建后台服务器](#nodeServe)会生成推流地址和管理端地址
 - 使用[`obs`开启直播](#obs)将直播流推送到后台服务器
 - 后台服务器对流进行加密、缓存、增加多个清晰度等等
-- 前端通过 [`flv.js`播放](#node-media-server)直播
+- 前端通过 [`flv.js`播放](#flv)直播
 
 ### 二、node-media-server<a id="nodeServe"></a> 搭建直播流服务器
 
@@ -56,9 +56,7 @@
   Node Media WebSocket Server started on port: 8887
   ```
 
-- 在浏览器中访问`127.0.0.1:8887/admin` 可访问服务器管理端地址。[这里可查看
-
-- [更多api](https://github.com/illuspas/Node-Media-Server/blob/master/README_CN.md#服务器信息统计)
+- 在浏览器中访问`127.0.0.1:8887/admin` 可访问服务器管理端地址。[这里可查看更多api](https://github.com/illuspas/Node-Media-Server/blob/master/README_CN.md#服务器信息统计)
 
   ![image-20231101181748853](mdimg/image-20231101181748853.png)
 
@@ -75,108 +73,94 @@
 
   ![image-20231101182948165](mdimg/image-20231101182948165.png)
 
-  
 
+### 四、使用<a id="nodeServe"></a>flv.js播放
 
+-  注意地址由app名称`live`加name`mylive2`组成
 
-### 四、后续待优化
-
-- 🎉 完善权限管理功能
-- 🎉 增加多语言切换功能
-- 🎉 增加全局主题,可一件配置页面动画,颜色,按钮大小等等 并增加配置保存与分享功能
-- 🙇‍🙇‍🙇‍ 有 Bug 或好玩的新功能欢迎在 issues 提出,看到了会第一时间回复 😊
-
-### 四、安装使用步骤
-
-- 克隆项目到本地
-
-```bash
-git https://github.com/jiuxiangyangguang/react-admin.git
+```html
+<script src="https://cdn.bootcss.com/flv.js/1.5.0/flv.min.js"></script>
+<video id="videoElement"></video>
+<script>
+    if (flvjs.isSupported()) {
+        var videoElement = document.getElementById('videoElement');
+        var flvPlayer = flvjs.createPlayer({
+            type: 'flv',
+            url: 'http://localhost:8887/live/mylive2.flv'   
+        });
+        flvPlayer.attachMediaElement(videoElement);
+        flvPlayer.load();
+        flvPlayer.play();
+    }
+</script>
 ```
 
-- **切换 dev 分支 由于服务器到期部分后台服务未部署请切换至 dev 分支浏览账号密码随便填**
+### 五、对视频流进行处理(高级操作)
 
-```bash
-git checkout dev
+- 浏览器访问`http://localhost:8887/live/mylive2.flv`后可以直接获取流这样并不安全,通常我们会对`url`进行加密 [node-media-server](https://github.com/illuspas/Node-Media-Server)该插件提供了方法,这里只介绍使用`m3u8`流来播放。
+- 修改上面的`createStream`方法,使用`ffmpeg`来处理流,上面我们已经下载了。
+- 完整配置如下
+
+```js
+const createStream = () => {
+   // eslint-disable-next-line @typescript-eslint/no-var-requires   解决ts,eslint报错
+   const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path  // 获取ffmpeg工具地址
+   // 流最基础的配置文件
+   const config = {
+      rtmp: {
+        port: 1935, // 推流端口
+        chunk_size: 60000,
+        gop_cache: true,
+        ping: 30,
+        ping_timeout: 60,
+      },
+      http: {
+        port: 8887, // 获取流的地址
+        mediaroot: './media', // 经过处理的流都会放在这个目录下
+        allow_origin: '*',
+      },
+      // 添加任务 输出两个不同分辨率的流
+      fission: {
+        ffmpeg: ffmpegPath,  // ffmpeg工具的地址,插件会调用ffmpeg来处理流
+        tasks: [
+          {
+            rule: 'live/*',
+            model: [
+              {
+                ab: '192k', // 音频码率
+                vb: '10000k', // 视频码率
+                vs: '1920x1080', // 决定了视频的分辨率
+                vf: '60', // 刷新率60fps
+              },
+              {
+                ab: '320k',
+                vb: '20000k',
+                vs: '2560x1440', // 决定了视频的分辨率 
+                vf: '60',
+              },
+            ],
+          },
+        ],
+      },
+      //  输m3u8格式的视频  及将视频转为hls
+      trans: {
+        ffmpeg: ffmpegPath,
+        tasks: [
+          {
+            app: 'live',
+            hls: true,
+            hlsFlags: '[hls_time=2:hls_list_size=3:hls_flags=delete_segments]',
+            hlsKeep: true, // to prevent hls file delete after end the stream
+            dash: true,
+            dashFlags: '[f=dash:window_size=3:extra_window_size=5]',
+            dashKeep: true // to prevent dash file delete after end the stream
+          }
+        ]
+      }
+    }
+    const avv = new NodeMediaServer(config)
+    avv.run()
+}
 ```
 
-- 安装依赖 (推荐使用 pnpm或者yarn)
-
-```bash
-pnpm i 
-```
-
-- 运行项目(使用main 分支时需要先启动[后台项目](https://github.com/jiuxiangyangguang/nestJs)不然无法登录,后台服务依赖于Redis,MySQL,建议使用Dockery拉取镜像以体验完整功能)
-
-```bash
-yarn dev
-```
-
-- 打包使用
-
-```bash
-yarn build
-```
-
-- 部署使用 docker 详情可见 package.json 文件 支持 gulpfile 一键部署到服务器
-
-- <a id="docker"></a>**Docker部署  可体验完整功能**
-
-- 所需镜像列表
-
-  - `traveldocker1/node`  后台服务
-  - `traveldocker1/admin:latest`  前端服务
-  - `traveldocker1/mysql`  数据库服务  [初始化数据库sql](./test.sql)
-  - `traveldocker1/redis`  缓存服务   [redis配置](./redis.conf)
-  - 新建`docker-compose.yml`文件   
-
-  ```yaml
-  version: '3'
-  services:
-    node:
-      build: .
-      image: traveldocker1/node
-      ports:
-      ports:
-        - '1152:1103'
-        - '8887:8887'
-        - '1935:1935'
-      depends_on:
-        - mysql
-        - redis
-    admin:
-      image: traveldocker1/admin:latest
-      ports:
-        - '1102:1102'
-    mysql:
-      image: traveldocker1/mysql
-      ports:
-        - '3308:3306'
-      environment:
-        MYSQL_ROOT_PASSWORD: root
-      volumes:
-        - db_data:/var/lib/mysql
-        - ./test.sql:/docker-entrypoint-initdb.d/test.sql
-    redis:
-      image: traveldocker1/redis
-      ports:
-        - '6378:6379'
-      command: redis-server /usr/local/etc/redis/redis.conf
-      volumes:
-        - ./redis.conf:/usr/local/etc/redis/redis.conf
-  
-  volumes:
-    db_data:
-  
-  ```
-  
-  - 运行容器
-
-  ```bash
-  docker-compose up
-  ```
-  
-  
-
-### 五、项目截图
-
+- **配置`hls`后`ffmpeg` 会将处理的流放到`media`文件夹中,视频保存为以`.ts`为后缀的文件中其中`index.m3u8`决定了视频的播放顺序所以要通过`http://localhost:8887/live/mylive2/index.m3u8`来获取视频** 
