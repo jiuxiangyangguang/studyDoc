@@ -2,7 +2,7 @@
 
 ### 介绍
 
-后端使用`node-media-server`搭建直播推流服务器,使用`obs`推流,前端可使用B站开源的`flv.js`来播放直播,React可使用`react-player`播放。
+后端使用`node-media-server`搭建直播推流服务器,使用`obs`推流,前端可使用B站开源的`flv.js`来播放直播,React可使用`react-player`播放
 
 ### 一、实现原理
 
@@ -13,7 +13,7 @@
 
 ### 二、node-media-server<a id="nodeServe"></a> 搭建直播流服务器
 
-   `node-media-server`是基于`node.Js`开发的一个推流服务器。GitHub地址 ☞ [node-media-server](https://github.com/illuspas/Node-Media-Server)
+   `node-media-server`是基于`node.Js`开发的一个推流服务器GitHub地址 ☞ [node-media-server](https://github.com/illuspas/Node-Media-Server)
 
 - 下载`node-media-server` 和`@ffmpeg-installer/ffmpeg`(对流进行处理需要用到这个工具)推荐使用`pnpm`
 
@@ -56,12 +56,12 @@
   Node Media WebSocket Server started on port: 8887
   ```
 
-- 在浏览器中访问`127.0.0.1:8887/admin` 可访问服务器管理端地址。[这里可查看更多api](https://github.com/illuspas/Node-Media-Server/blob/master/README_CN.md#服务器信息统计)
+- 在浏览器中访问`127.0.0.1:8887/admin` 可访问服务器管理端地址[这里可查看更多api](https://github.com/illuspas/Node-Media-Server/blob/master/README_CN.md#服务器信息统计)
 
   ![image-20231101181748853](mdimg/image-20231101181748853.png)
 
 
-### 三、使用obs软件进行直播推流
+### 三、使用<a id="obs"></a>obs软件进行直播推流
 
 - 下载`obs` 这里以[windows](https://obsproject.com/zh-cn/)版作为演示
 
@@ -74,7 +74,7 @@
   ![image-20231101182948165](mdimg/image-20231101182948165.png)
 
 
-### 四、使用<a id="nodeServe"></a>flv.js播放
+### 四、使用<a id="flv"></a>flv.js播放
 
 -  注意地址由app名称`live`加name`mylive2`组成
 
@@ -97,8 +97,8 @@
 
 ### 五、对视频流进行处理(高级操作)
 
-- 浏览器访问`http://localhost:8887/live/mylive2.flv`后可以直接获取流这样并不安全,通常我们会对`url`进行加密 [node-media-server](https://github.com/illuspas/Node-Media-Server)该插件提供了方法,这里只介绍使用`m3u8`流来播放。
-- 修改上面的`createStream`方法,使用`ffmpeg`来处理流,上面我们已经下载了。
+- 浏览器访问`http://localhost:8887/live/mylive2.flv`后可以直接获取流这样并不安全,通常我们会对`url`进行加密 [node-media-server](https://github.com/illuspas/Node-Media-Server)该插件提供了方法,这里只介绍使用`m3u8`流来播放
+- 修改上面的`createStream`方法,使用`ffmpeg`来处理流,上面我们已经下载了
 - 完整配置如下
 
 ```js
@@ -164,3 +164,14 @@ const createStream = () => {
 ```
 
 - **配置`hls`后`ffmpeg` 会将处理的流放到`media`文件夹中,视频保存为以`.ts`为后缀的文件中其中`index.m3u8`决定了视频的播放顺序所以要通过`http://localhost:8887/live/mylive2/index.m3u8`来获取视频** 
+
+### 六、流加密
+
+- [node-media-server](https://github.com/illuspas/Node-Media-Server)该插件确实提供了url加密但通过实践加密功能并不完善支持的范围也有限可在[Issues](https://github.com/illuspas/Node-Media-Server/issues)中查看详情
+- 出于安全来讲如果应用到项目中还是建议采取其他方案来实现流加密
+
+### 最后
+
+- 具体实现和项目代码Github  ☞ [jiuxiangyangguang/nestJs (github.com)](https://github.com/jiuxiangyangguang/nestJs)
+- 还有一个基于最新React+Vite4.0开发的管理端项目  ☞ [jiuxiangyangguang/nestJs (github.com)](https://github.com/jiuxiangyangguang/nestJs)
+- 如果这篇文章能为你提供帮助，那么请轻轻移动你的鼠标点亮`赞赏之星`，`关注`我的更新，并在`评论`区留下你的足迹😊
