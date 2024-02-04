@@ -1,7 +1,35 @@
-var arr = [1,2,3,4,5,6,7,8,9,10]
-for(let i = arr.length; i > 0; i--) {
-    let index = Math.floor(Math.random() * i)
-   [arr[i-1], arr[index]] = [arr[index], arr[i-1]]
-
+const m1 = async (req, res, next) => {
+  console.log('m1 start')
+  let result = await next()
+  console.log('m1 end')
 }
-    console.log(arr);
+
+const m2 = async (req, res, next) => {
+  console.log('m2 start')
+  let result = await next()
+  console.log('m2 end')
+}
+
+const m3 = async (req, res, next) => {
+  console.log('m3 start')
+  let result = await next()
+  console.log('m3 end')
+  return result
+}
+
+const middlewares = [m1, m2, m3]
+
+function useApp(req, res) {
+  const next = () => {
+    const middleware = middlewares.shift()
+    if (middleware) {
+      return Promise.resolve(middleware(req, res, next))
+    } else {
+      return Promise.resolve('end')
+    }
+  }
+  next()
+}
+
+// 启动中间件
+useApp()

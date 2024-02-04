@@ -2,19 +2,21 @@ function defineReactive(data, key, val) {
   if (val && typeof val === 'object') {
     observer(val)
   }
-  const dep = new Dep()
+  let dep = new Dep() // 每一个属性都一个dep 存储自己的订阅者以便更新的时候执行回调
   Object.defineProperty(data, key, {
     enumerable: true,
     configurable: true,
     get() {
       // 需要被监听响应的数据
       Dep.target && dep.depend()
+      console.log(dep.subscribers)
       return val
     },
     set(newVal) {
       if (val === newVal) {
         return
       }
+      dep = dep || new Dep()
       val = newVal
       console.log('属性' + key + '已经被监听了，现在值为：“' + newVal.toString() + '”')
       dep.notify() // 如果数据变化，通知所有订阅者
@@ -42,15 +44,13 @@ Dep.prototype.notify = function () {
   this.subscribers.forEach((sub) => sub.update())
 }
 
-var library = {
-  book1: {
+const library = {
+  user: {
     name: {
-      a: '第一次',
-      b: ''
+      a: '第一次'
     }
   },
-  book2: '',
-  book3: []
+  info: ''
 }
 function Watcher(obj, key, cb) {
   this.obj = obj
@@ -85,10 +85,20 @@ Watcher.prototype = {
   }
 }
 
-observer(library)
-new Watcher(library, 'book1.name.a', function (newVal, oldVal) {
-  console.log(newVal, oldVal)
-})
-library.book1.name.a = 'vue权威指南' // 属性name已经被监听了，现在值为：“vue权威指南”
-library.book2 = '没有此书籍' // 属性book2已经被监听了，现在值为：“没有此书籍”
-library.book3 = [] // 属性book2已经被监听了，现在值为：“没有此书籍”
+const Vue = (data, dom, key) => {
+  observer(data)
+  new Watcher(data, key, function (newVal, oldVal) {
+    dom.innerHTML = newVal
+  })
+  let value = data
+  const keys = key.split('.')
+  keys.forEach((key) => {
+    value = value[key]
+  })
+  dom.innerHTML = value
+}
+Vue(library, document.querySelector('#output'), 'user.name.a')
+
+setTimeout(() => {
+  library.user.name.a = 'vue权威指南' // 属性name已经被监听了，现在值为：“vue权威指南”
+}, 1000)
